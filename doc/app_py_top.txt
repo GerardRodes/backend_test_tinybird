@@ -1,0 +1,7 @@
+ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+1024    1.291    0.001   20.678    0.020 app.py:19(post)
+9216    0.197    0.000    0.197    0.000 app.py:16(data_received)
+1024    0.000    0.000    0.000    0.000 app.py:13(initialize)
+	 1    0.000    0.000   28.484   28.484 app.py:1(<module>)
+	 1    0.000    0.000   28.415   28.415 app.py:54(run)
+	 1    0.000    0.000    0.000    0.000 app.py:11(DataReceiverHandler)

@@ -1,0 +1,42 @@
+Timer unit: 1e-06 s
+
+Total time: 25.0222 s
+File: app.py
+Function: post at line 19
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    19                                               @profile
+    20                                               def post(self):
+    21      1024        765.0      0.7      0.0          records_valid = 0
+    22      1024        465.0      0.5      0.0          records_invalid = 0
+    23      2048      32424.0     15.8      0.1          with open(f"csv/nyc_taxi-{date.today()}.csv", 'a') as fw:
+    24      1024        593.0      0.6      0.0              fieldnames = [
+    25                                                           'vendorid',
+    26                                                           'tpep_pickup_datetime',
+    27                                                           'trip_distance',
+    28                                                           'total_amount',
+    29                                                       ]
+    30      1024       4272.0      4.2      0.0              writer = csv.DictWriter(fw, fieldnames, extrasaction='ignore')
+    31      1024        908.0      0.9      0.0              fr = io.BytesIO(self.request_body)
+    32   1639424     737644.0      0.4      2.9              for record in fr.readlines():
+    33   1638400     629732.0      0.4      2.5                  try:
+    34   1638400   15769784.0      9.6     63.0                      row = json.loads(record)
+    35   1638400    7011346.0      4.3     28.0                      writer.writerow(row)
+    36   1638400     806184.0      0.5      3.2                      records_valid += 1
+    37                                                           except Exception:
+    38                                                               records_invalid += 1
+    39      1024        538.0      0.5      0.0          result = {
+    40      2048        886.0      0.4      0.0              'result': {
+    41      1024        362.0      0.4      0.0                  'status': 'ok',
+    42      1024        513.0      0.5      0.0                  'stats': {
+    43      1024        732.0      0.7      0.0                      'bytes': len(self.request_body),
+    44      1024        608.0      0.6      0.0                      'records': {
+    45      1024        388.0      0.4      0.0                          'valid': records_valid,
+    46      1024        400.0      0.4      0.0                          'invalid': records_invalid,
+    47      1024        557.0      0.5      0.0                          'total': records_valid + records_invalid,
+    48                                                               },
+    49                                                           }
+    50                                                       }
+    51                                                   }
+    52      1024      23144.0     22.6      0.1          self.write(result)

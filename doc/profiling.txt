@@ -1,0 +1,13 @@
+10728  python3 -m cProfile app.py
+10730* make benchmark
+10738  python3 -m cProfile -o prof.out app.py
+10743  python3 -m pstats prof.out
+
+
+10746  pyprof2calltree -k -i prof.out
+
+
+
+10750  pip install line_profiler
+10751  kernprof -l app.py
+10754  python -m line_profiler app.py.lprof

@@ -15,7 +15,7 @@ data/nyc_taxi.ndjson: data
 
 benchmark: out data/nyc_taxi.ndjson
 	for c in {1,2,4,8}; do \
-		ab -n 256 -c $${c} \
+		ab -k -n 256 -c $${c} \
 			-g out/requests_$${c}.dat \
 			-p data/nyc_taxi.ndjson \
 			"http://0.0.0.0:8888/"; \
