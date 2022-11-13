@@ -9,7 +9,7 @@ setup(
     description='A Tiny HTTP data handler server',
     packages=find_packages(),
     install_requires=[
-        'tornado==6.1',
+        'tornado==6.2',
     ],
     entry_points={
         'console_scripts': [
