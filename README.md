@@ -97,7 +97,7 @@ is not going to write anything to disk until we exit the scope of the call to `w
 Here is also a nice picture from `pyprof2calltree`
 ![post_call_graph](./doc/post_call_graph.png)
 
-## New design
+## First design
 
 Since the CPU is struggling to keep up with the requests of the benchmark I am
 going to help it make use of the rest of the cores that it has.
@@ -109,38 +109,26 @@ I am going to use:
 I [encountered an issue](https://stackoverflow.com/questions/10184975/ab-apache-bench-error-apr-poll-the-timeout-specified-has-expired-70007-on) with `ab`
 when I introduced the `asyncio` behavior I had to also add the `-k` parameter to prevent it from hanging until it timed out.
 
-## Results
+The reality of this approach is that the cost of synchronization and communication between threads causes a bigger workload than just
+processing everything on the same process, it ends up being counter-productive.
 
-![1](./doc/response_time_c1.png)
-![2](./doc/response_time_c2.png)
-![4](./doc/response_time_c4.png)
-![8](./doc/response_time_c8.png)
+## Final design
 
-## Future improvements
+I've just learned that you can open a file in append mode from multiple processes and Linux will handle it correctly as long as you write atomically:
+- https://nullprogram.com/blog/2016/08/03/
+- https://unix.stackexchange.com/a/346196/486990
 
-### Multiple instances within the same Event Loop
+So I ended up making use of `tornado.process.fork_processes(num_processes=None)` and let the framework to scale by itself, which worked well.
 
-The instance of the web app is not able of receiving new
-requests while it is waiting for the JSON futures to resolve at:
-```python
-for future in asyncio.as_completed(self.load_json_futures):
-```
-It should be possible to have multiple instances running on different tasks
-within the same `asyncio.EventLoop` on each of those processes, so while one of the instances is waiting for the futures to resolve, other instances could be handling new requests, those instances would need to reuse the port to which the server is listening.
+![1](./doc/final_c1.png)
+![2](./doc/final_c2.png)
+![4](./doc/final_c4.png)
+![8](./doc/final_c8.png)
 
-### Multiple instances on separate processes
+I've also tried other approaches like:
+- [Moving the CSV writing to a queue to schedule it for later](https://github.com/GerardRodes/backend_test_tinybird/blob/1de607b078e9ee2e5794e6f36c41451055897438/app.py#L27-L31)
+- [Move the JSON parsing to different processes with ProcessPoolExecutor](https://github.com/GerardRodes/backend_test_tinybird/blob/25acab00469645c2a619c46fdead2ad3bde0c13a/app.py#L108)
 
-I tried using `tornado.process.fork_processes` and [add_sockets multi-process](https://www.tornadoweb.org/en/stable/httpserver.html#:~:text=add_sockets%3A-,multi%2Dprocess,-%3A) and I obtained much better results since it was spawning multiple processes with different instances of the web application handling requests, but then each of those forked processes was spawning different `futures.ProcessPoolExecutor` which could cause simultaneous writes to the output CSV (it didn't happen, but I guess that it would eventually).
-This could be solved by just writing to different files on each process or maintaining a single process writing to the CSV file and communicating with the others.
-
-![1](./doc/fork_processes_response_time_c1.png)
-![2](./doc/fork_processes_response_time_c2.png)
-![4](./doc/fork_processes_response_time_c4.png)
-![8](./doc/fork_processes_response_time_c8.png)
-
-### Reduce the communication costs
-
-In order to communicate between the `ProcessPoolExecutor` and the main thread all the data must be
-serialized, I am pretty sure that that is a big chunk of the processing time right now.
-We could share the data by sharing memory instead of copying it so we could avoid the
-cost of serialization/deserialization between processes.
+But none of those solutions have worked better than just doing the work on the same process and task.
+Probably because process communication introduces extra workload.
+And scheduling the write for later will just reorganize the work within the current event loop, but will not reduce the work, and it will endup writting the file just after it finishes the current requests.
